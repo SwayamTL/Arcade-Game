@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "@fontsource/dm-mono/400.css";
+@import "@fontsource/dm-mono/500.css";
+
+/* Brand tokens. Every colour and font in the UI comes from here. */
+@theme {
+  --font-sans: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-brand-bg: #ecfdf5;
+  --color-ink: #111827;
+  --color-accent: #059669;
+  --color-accent-bright: #10b981;
+  --color-surface: #ffffff;
+  --color-line: #a7f3d0;
+  --color-danger: #b91c1c;
+}
+
+@layer base {
+  html {
+    @apply bg-brand-bg text-ink antialiased;
+  }
+  body {
+    @apply min-h-dvh font-sans;
+  }
+}
