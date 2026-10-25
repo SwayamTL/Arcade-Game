@@ -6,3 +6,12 @@ dist
 !.env.example
 *.tsbuildinfo
 .DS_Store
+
+# Supabase CLI local state (project ref, temp files)
+supabase/.temp
+supabase/.branches
+
+# Local-only tool settings and keys
+.claude/settings.local.json
+*.pem
+*.key
