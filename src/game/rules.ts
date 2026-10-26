@@ -30,16 +30,18 @@ export const REEL_MIN_SPIN_MS = 350
 // Time for a stopped reel to ease onto the nearest symbol.
 export const SETTLE_MS = 120
 
+// Scoring adds up the line: a match pays (times the streak multiplier), then each bug costs
+// BUG_PENALTY. So a pair with a bug and no streak nets 0.
 export const PAYOUTS = {
-  rubyTriple: 100,
-  triple: 50,
   pair: 10,
-  // A production outage: three bugs on the payline.
-  bugTriple: -100,
+  triple: 50,
 } as const
 
-// Points lost for each bug on the payline when the spin doesn't score. This keeps blind mashing
-// below a beginner who aims; a round's score never drops below 0.
+// Ruby matches pay this many times a normal match: a ruby pair 20, three rubies 100.
+export const RUBY_FACTOR = 2
+
+// Points lost for each bug on the payline, never multiplied. Any bug also breaks the streak.
+// This keeps blind mashing below a beginner who aims; a round's score never drops below 0.
 export const BUG_PENALTY = 10
 
 // Multiplier for the Nth consecutive scoring spin: x1, x2, x3, then capped at x4.
@@ -59,7 +61,7 @@ export const REEL_SPEED_FACTORS = [1, 1.07, 1.14] as const
 // Upper bound used by the server to reject impossible scores. Every spin takes at least
 // RESULT_PAUSE_MS, so this assumes a ruby jackpot at max multiplier on every possible spin.
 export const MAX_PLAUSIBLE_SCORE =
-  Math.ceil(ROUND_MS / RESULT_PAUSE_MS) * PAYOUTS.rubyTriple * MAX_MULTIPLIER
+  Math.ceil(ROUND_MS / RESULT_PAUSE_MS) * PAYOUTS.triple * RUBY_FACTOR * MAX_MULTIPLIER
 
 // A lever drag spins once the knob passes this fraction of its track. A tap always spins.
 export const LEVER_PULL_FRACTION = 0.5

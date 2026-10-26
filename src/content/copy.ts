@@ -19,7 +19,7 @@ export const GAME = {
   name: 'Ruby Slots',
   short: 'Stop on three rubies',
   howTo:
-    'Pull the lever, then hit Stop on each reel. Line up 💎💎💎 and keep a streak going to multiply your points. Each 🐛 on a losing spin costs 10.',
+    'Pull the lever, then hit Stop on each reel. 2 alike = 10, 3 alike = 50, 💎 pays double. Streaks multiply matches. Each 🐛 is −10 and breaks your streak.',
   keyHint: 'Keyboard: ↓ pulls the lever, Space or Enter stops a reel.',
   stop: 'Stop',
 }
@@ -27,11 +27,15 @@ export const GAME = {
 export const OUTCOME_COPY: Record<Outcome, string> = {
   jackpot: 'Three rubies!',
   triple: 'Triple!',
+  rubyPair: 'Ruby pair!',
   pair: 'Pair',
   bug: 'Production outage!',
   bugged: 'Bug shipped. Streak lost.',
   miss: 'No match. Streak lost.',
 }
+
+// Added when a match also had a bug on the line.
+export const STREAK_LOST = 'Streak lost.'
 
 // Shown when the player uses the wrong control.
 export const NUDGE = {
@@ -52,7 +56,7 @@ export const ABOUT = {
 }
 
 export const FORM = {
-  heading: 'Put your score on the board',
+  heading: 'Put your score on the leaderboard and be eligible for prizes',
   nameLabel: 'Name',
   emailLabel: 'Email',
   // REVIEW: privacy notice wording and the missing privacy policy link need RailsFactory approval.

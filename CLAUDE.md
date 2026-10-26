@@ -9,10 +9,11 @@ One game only: **Ruby Slots**. After a 45 s round the player can leave a name an
 React 19 + TypeScript + Vite 8, Tailwind CSS v4 (Vite plugin, CSS-first `@theme`, no `tailwind.config.js`), Netlify Functions (v2, `Request -> Response`), Supabase Postgres, Vitest.
 
 ## Structure
-- `src/game/rules.ts`: **every tunable game number** (strips, paytable, timer, speed levels, multiplier cap, `MAX_PLAUSIBLE_SCORE`). Change rules here.
+`README.md` has the full file map (what each file does, what it affects, when to change it) and the data flows. This list is the short version.
+- `src/game/rules.ts`: **every tunable game number** (strips, paytable and `RUBY_FACTOR`, bug penalty, timer, speed levels, multiplier cap, minimum spin time, lever pull threshold, `MAX_PLAUSIBLE_SCORE`). Change rules here.
 - `src/game/scoring.ts`, `src/game/reels.ts`: pure logic, unit-tested.
 - `src/game/useSlotGame.ts`: game state machine + rAF loop. State lives in a ref, React gets `GameView` snapshots, and reel transforms are written straight to the DOM.
-- `src/components/`: `SlotMachine`, `Reel`, `ResultPanel`, `PlayerForm`, `Leaderboard`, `Header`.
+- `src/components/`: `SlotMachine` (machine UI, keyboard shortcuts, wrong-control hints), `Reel`, `Lever` (pointer-drag lever), `feedback.ts` (shake/vibrate helpers), `ResultPanel`, `PlayerForm`, `Leaderboard`, `Header`, `FullscreenButton` + `useFullscreen` (Fullscreen API).
 - `src/content/copy.ts`: all UI text. Strings marked `REVIEW` need RailsFactory sign-off.
 - `src/shared/submission.ts`: validation + API types shared by the browser and the functions.
 - `src/api/client.ts`: browser calls to `/api/*`.
@@ -20,6 +21,14 @@ React 19 + TypeScript + Vite 8, Tailwind CSS v4 (Vite plugin, CSS-first `@theme`
 - `netlify/lib/handlers.ts` (testable handlers) and `netlify/lib/store.ts` (Supabase service-role client).
 - `supabase/migrations/`: schema, version-controlled.
 - `src/assets/brand/`: official SVGs copied unchanged from the design handoff. Never edit or redraw them.
+- Tests sit next to the file they test (`Foo.tsx` → `Foo.test.tsx`). Component and hook tests start with `// @vitest-environment jsdom`.
+
+## Game behaviour
+- **Controls are split on purpose.** Only the lever (drag, tap, or ↓) starts a spin. The Stop button, Space and Enter only stop reels. Using the wrong control shakes the right one (`nudge`) and never costs points. Don't merge them back into one input, because that brings back blind mashing.
+- Stop presses in the first `REEL_MIN_SPIN_MS` of a spin are ignored, which closes an exploit that repeated triples.
+- Scoring adds up the line: `matchPoints × multiplier − bugs × BUG_PENALTY`. Pair 10, triple 50, and 💎 matches pay `RUBY_FACTOR`× as much. Bugs are flat (never multiplied), so 🚂🚂🐛 with no streak is 0 and 🐛🐛🐛 is −30. A match grows the streak, and any bug or a miss breaks it. Keep it a plain sum. Players reason by adding what they see, so no special cases (an earlier version where a pair with a bug paid full points, and 🐛🐛🐛 was −100, read as unfair). The status line (`SpinBreakdown` in `SlotMachine`) shows the sum. A round's score never drops below 0 (the server rejects negatives).
+- Balance was checked with a Monte Carlo simulation of a spammer, a beginner, a casual and a skilled player. The target order is spammer < beginner < casual < skilled, with about 6% or fewer beginners scoring 0. Re-check that order before changing payouts, penalties, speeds or the timer.
+- Fullscreen targets the `App` root. The layout switches only on a real `fullscreenchange`, and the click is never trusted. A pointer click on any `[data-native-keys]` control must release focus (`releasePointerFocus`) so Space and Enter keep stopping reels.
 
 ## Conventions
 - Brand tokens live only in `src/index.css` `@theme` (`brand-bg`, `ink`, `accent`, `accent-bright`, `surface`, `line`, `danger`). Font: DM Mono, self-hosted via `@fontsource`.
@@ -27,6 +36,14 @@ React 19 + TypeScript + Vite 8, Tailwind CSS v4 (Vite plugin, CSS-first `@theme`
 - Submissions are idempotent. The browser creates `attemptId` when a round ends, a retry resends the same ID, and a duplicate insert (unique violation) returns `already_recorded`.
 - Never fake a successful write. Missing env vars make the functions return 500.
 - The score is client-reported. The server only bounds-checks it against `MAX_PLAUSIBLE_SCORE`, so there is no real anti-cheat.
+
+## Keeping docs current
+Docs are part of every change, in the same commit:
+- Adding, removing, renaming or moving a file: update the README file map, the Structure list above, and any flow it appears in.
+- Changing behaviour, a rule or a data flow: update the README section that describes it, plus "Game behaviour" or "Conventions" here if a rule changed.
+- New source files start with a 1–2 line comment saying what the file does and what it affects. When you edit a file that lacks one, add it. Keep these comments true when the file changes.
+- Game numbers go in `rules.ts`, visible text in `copy.ts`, colours in `index.css` `@theme`. Never hard-code them in components.
+- Before finishing a change, check that every path named in README.md and CLAUDE.md still exists.
 
 ## Environment variables (server-only, set in Netlify and in local `.env`)
 - `SUPABASE_URL`

@@ -1,12 +1,15 @@
-import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, SPEED_LEVELS, type SymbolId } from './rules'
+import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, RUBY_FACTOR, SPEED_LEVELS, type SymbolId } from './rules'
 
-// 'bugged' is a losing spin with one or two bugs on the payline; 'bug' is three of them.
-export type Outcome = 'jackpot' | 'triple' | 'pair' | 'bug' | 'bugged' | 'miss'
+// Names the line for the status text. 'bug' is three bugs; 'bugged' is no match but at least one bug.
+export type Outcome = 'jackpot' | 'triple' | 'rubyPair' | 'pair' | 'bug' | 'bugged' | 'miss'
 
+// A spin adds up its line: matchPoints × multiplier − bugs × BUG_PENALTY.
 export interface SpinResult {
   outcome: Outcome
-  basePoints: number
+  // What the match is worth before the multiplier; 0 when nothing matched.
+  matchPoints: number
   multiplier: number
+  bugs: number
   points: number
   // Consecutive scoring spins after this one; 0 means the streak was broken.
   streak: number
@@ -19,15 +22,17 @@ export function classify([a, b, c]: readonly [SymbolId, SymbolId, SymbolId]): Ou
     return 'triple'
   }
   const pairSymbol = a === b || a === c ? a : b === c ? b : null
+  if (pairSymbol === 'ruby') return 'rubyPair'
   if (pairSymbol && pairSymbol !== 'bug') return 'pair'
-  return 'miss'
+  return [a, b, c].includes('bug') ? 'bugged' : 'miss'
 }
 
-const BASE_POINTS: Record<Outcome, number> = {
-  jackpot: PAYOUTS.rubyTriple,
+const MATCH_POINTS: Record<Outcome, number> = {
+  jackpot: PAYOUTS.triple * RUBY_FACTOR,
   triple: PAYOUTS.triple,
+  rubyPair: PAYOUTS.pair * RUBY_FACTOR,
   pair: PAYOUTS.pair,
-  bug: PAYOUTS.bugTriple,
+  bug: 0,
   bugged: 0,
   miss: 0,
 }
@@ -40,15 +45,19 @@ export function evaluateSpin(
   symbols: readonly [SymbolId, SymbolId, SymbolId],
   streak: number,
 ): SpinResult {
-  const classified = classify(symbols)
+  const outcome = classify(symbols)
+  const matchPoints = MATCH_POINTS[outcome]
   const bugs = symbols.filter((s) => s === 'bug').length
-  const outcome: Outcome = classified === 'miss' && bugs > 0 ? 'bugged' : classified
-  const basePoints = outcome === 'bugged' ? -BUG_PENALTY * bugs : BASE_POINTS[outcome]
-  if (basePoints <= 0) {
-    return { outcome, basePoints, multiplier: 1, points: basePoints, streak: 0 }
+  const multiplier = matchPoints > 0 ? multiplierFor(streak) : 1
+  return {
+    outcome,
+    matchPoints,
+    multiplier,
+    bugs,
+    points: matchPoints * multiplier - bugs * BUG_PENALTY,
+    // A match grows the streak; any bug breaks it.
+    streak: matchPoints > 0 && bugs === 0 ? streak + 1 : 0,
   }
-  const multiplier = multiplierFor(streak)
-  return { outcome, basePoints, multiplier, points: basePoints * multiplier, streak: streak + 1 }
 }
 
 export function speedForScore(score: number): number {

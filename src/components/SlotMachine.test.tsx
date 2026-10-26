@@ -101,10 +101,29 @@ describe('SlotMachine controls', () => {
     setup({
       ...ready,
       phase: 'scored',
-      lastSpin: { outcome: 'bugged', basePoints: -10, multiplier: 1, points: -10, streak: 0 },
+      lastSpin: { outcome: 'bugged', matchPoints: 0, multiplier: 1, bugs: 1, points: -10, streak: 0 },
     })
     expect(screen.getByText('Bug shipped. Streak lost.')).toBeTruthy()
-    expect(screen.getByText('−10', { exact: false }).className).toContain('text-danger')
+    expect(screen.getByText('🐛 −10', { exact: false }).className).toContain('text-danger')
+  })
+
+  it('shows how a match with a bug adds up', () => {
+    setup({
+      ...ready,
+      phase: 'scored',
+      lastSpin: { outcome: 'pair', matchPoints: 10, multiplier: 2, bugs: 1, points: 10, streak: 0 },
+    })
+    const line = screen.getByText('Pair').parentElement!
+    expect(line.textContent).toBe('Pair +20 (×2) · 🐛 −10 = +10 Streak lost.')
+  })
+
+  it('shows a cancelled-out match as = 0', () => {
+    setup({
+      ...ready,
+      phase: 'scored',
+      lastSpin: { outcome: 'pair', matchPoints: 10, multiplier: 1, bugs: 1, points: 0, streak: 0 },
+    })
+    expect(screen.getByText('Pair').parentElement!.textContent).toBe('Pair +10 · 🐛 −10 = 0 Streak lost.')
   })
 
   it('shakes Stop when the lever is used mid-spin', () => {

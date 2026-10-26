@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { GAME, NUDGE, OUTCOME_COPY } from '../content/copy'
-import { REEL_STRIPS, ROUND_MS } from '../game/rules'
+import { GAME, NUDGE, OUTCOME_COPY, STREAK_LOST } from '../content/copy'
+import { BUG_PENALTY, REEL_STRIPS, ROUND_MS } from '../game/rules'
 import type { GameView } from '../game/useSlotGame'
-import { multiplierFor } from '../game/scoring'
+import { multiplierFor, type SpinResult } from '../game/scoring'
 import { buzz, nudge } from './feedback'
 import { Lever, type LeverState } from './Lever'
 import { Reel } from './Reel'
@@ -22,6 +22,37 @@ interface SlotMachineProps {
 }
 
 const NUDGE_MS = 1800
+
+const signed = (n: number) => (n < 0 ? `−${-n}` : n > 0 ? `+${n}` : '0')
+
+// Shows how the spin added up, e.g. "Pair +20 (×2) · 🐛 −10 = +10 Streak lost."
+function SpinBreakdown({ spin }: { spin: SpinResult }) {
+  const matched = spin.matchPoints > 0
+  const mixed = matched && spin.bugs > 0
+  return (
+    <>
+      <span className="font-medium">{OUTCOME_COPY[spin.outcome]}</span>
+      {matched && (
+        <span className="text-accent">
+          {' '}
+          +{spin.matchPoints * spin.multiplier}
+          {spin.multiplier > 1 && ` (×${spin.multiplier})`}
+        </span>
+      )}
+      {spin.bugs > 0 && (
+        <span className="text-danger">
+          {mixed ? ' · ' : ' '}🐛 −{spin.bugs * BUG_PENALTY}
+        </span>
+      )}
+      {mixed && (
+        <>
+          <span className="font-medium"> = {signed(spin.points)}</span>
+          <span className="text-ink/70"> {STREAK_LOST}</span>
+        </>
+      )}
+    </>
+  )
+}
 
 function leverState(view: GameView): LeverState {
   if (view.phase === 'spinning') return 'busy'
@@ -158,19 +189,7 @@ export function SlotMachine({
             ) : (
               <>
                 {view.phase === 'ready' && GAME.howTo}
-                {playing && view.lastSpin && view.phase === 'scored' && (
-                  <>
-                    <span className="font-medium">{OUTCOME_COPY[view.lastSpin.outcome]}</span>
-                    {view.lastSpin.points > 0 && (
-                      <span className="text-accent">
-                        {' '}
-                        +{view.lastSpin.points}
-                        {view.lastSpin.multiplier > 1 && ` (×${view.lastSpin.multiplier})`}
-                      </span>
-                    )}
-                    {view.lastSpin.points < 0 && <span className="text-danger"> −{-view.lastSpin.points}</span>}
-                  </>
-                )}
+                {playing && view.lastSpin && view.phase === 'scored' && <SpinBreakdown spin={view.lastSpin} />}
                 {view.phase === 'spinning' && view.streak > 0 && (
                   <span>Streak: next win ×{multiplierFor(view.streak)}</span>
                 )}
