@@ -44,11 +44,11 @@ export const ABOUT = {
 
 export const FORM = {
   heading: 'Put your score on the board',
-  nameLabel: 'Name (shown on the leaderboard)',
-  emailLabel: 'Email (never shown publicly)',
+  nameLabel: 'Name',
+  emailLabel: 'Email',
   // REVIEW: privacy notice wording and the missing privacy policy link need RailsFactory approval.
   consentLabel:
-    'I agree that RailsFactory stores my name, email and score for this RubyConf India game. My name and score may appear on today’s leaderboard. My email is never shown.',
+    'I agree that RailsFactory stores my name, email and score for this RubyConf India game.',
   // REVIEW: marketing opt-in wording needs RailsFactory approval.
   marketingLabel: 'Also email me about RailsFactory’s Rails services (optional).',
   // REVIEW: retention period and contact address for deletion requests are placeholders.
