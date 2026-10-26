@@ -1,65 +1,50 @@
 import { describe, expect, it } from 'vitest'
-import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, RUBY_FACTOR, SPEED_LEVELS } from './rules'
+import { BUG_PENALTY, MAX_MULTIPLIER, RUBY_POINTS, SPEED_LEVELS } from './rules'
 import { classify, evaluateSpin, multiplierFor, speedForScore } from './scoring'
 
 describe('classify', () => {
-  it('detects a ruby jackpot', () => {
+  it('names the line by its rubies, in any position', () => {
     expect(classify(['ruby', 'ruby', 'ruby'])).toBe('jackpot')
-  })
-  it('detects other triples', () => {
-    expect(classify(['rails', 'rails', 'rails'])).toBe('triple')
+    expect(classify(['ruby', 'rails', 'ruby'])).toBe('rubyPair')
+    expect(classify(['gear', 'ruby', 'bug'])).toBe('ruby')
   })
   it('treats a bug triple as its own outcome', () => {
     expect(classify(['bug', 'bug', 'bug'])).toBe('bug')
   })
-  it('detects pairs in any position', () => {
-    expect(classify(['gear', 'gear', 'test'])).toBe('pair')
-    expect(classify(['gear', 'test', 'gear'])).toBe('pair')
-    expect(classify(['test', 'gear', 'gear'])).toBe('pair')
-  })
-  it('names a ruby pair', () => {
-    expect(classify(['ruby', 'rails', 'ruby'])).toBe('rubyPair')
-  })
-  it('does not count a bug pair as a match', () => {
-    expect(classify(['bug', 'bug', 'ruby'])).toBe('bugged')
-  })
-  it('scores nothing for three different symbols', () => {
-    expect(classify(['ruby', 'rails', 'gear'])).toBe('miss')
+  it('does not count other matches', () => {
+    expect(classify(['rails', 'rails', 'rails'])).toBe('miss')
+    expect(classify(['gear', 'gear', 'bug'])).toBe('bugged')
   })
 })
 
 describe('evaluateSpin (adds up the line)', () => {
-  it('pays the table at x1 with no streak', () => {
-    expect(evaluateSpin(['deploy', 'deploy', 'gear'], 0)).toMatchObject({ points: PAYOUTS.pair, multiplier: 1, streak: 1 })
-    expect(evaluateSpin(['deploy', 'deploy', 'deploy'], 0)).toMatchObject({ points: PAYOUTS.triple, streak: 1 })
+  it('pays only for rubies, at x1 with no streak', () => {
+    expect(evaluateSpin(['ruby', 'gear', 'test'], 0)).toMatchObject({ points: RUBY_POINTS[1], multiplier: 1, streak: 1 })
+    expect(evaluateSpin(['ruby', 'gear', 'ruby'], 0)).toMatchObject({ outcome: 'rubyPair', points: RUBY_POINTS[2] })
+    expect(evaluateSpin(['ruby', 'ruby', 'ruby'], 0)).toMatchObject({ outcome: 'jackpot', points: RUBY_POINTS[3] })
   })
 
-  it('pays double for rubies', () => {
-    expect(evaluateSpin(['ruby', 'gear', 'ruby'], 0)).toMatchObject({ outcome: 'rubyPair', points: PAYOUTS.pair * RUBY_FACTOR })
-    expect(evaluateSpin(['ruby', 'ruby', 'ruby'], 0)).toMatchObject({ outcome: 'jackpot', points: PAYOUTS.triple * RUBY_FACTOR })
+  it('pays nothing for other matches and resets the streak', () => {
+    expect(evaluateSpin(['deploy', 'deploy', 'deploy'], 2)).toMatchObject({ points: 0, streak: 0, multiplier: 1 })
+    expect(evaluateSpin(['gear', 'rails', 'test'], 2)).toMatchObject({ outcome: 'miss', points: 0, streak: 0 })
   })
 
-  it('multiplies consecutive matches and caps the multiplier', () => {
-    expect(evaluateSpin(['gear', 'gear', 'test'], 1)).toMatchObject({ multiplier: 2, points: PAYOUTS.pair * 2, streak: 2 })
-    expect(evaluateSpin(['gear', 'gear', 'test'], 2).multiplier).toBe(3)
-    expect(evaluateSpin(['gear', 'gear', 'test'], 3).multiplier).toBe(MAX_MULTIPLIER)
-    expect(evaluateSpin(['gear', 'gear', 'test'], 10).multiplier).toBe(MAX_MULTIPLIER)
-  })
-
-  it('resets the streak on a miss', () => {
-    expect(evaluateSpin(['ruby', 'rails', 'gear'], 3)).toMatchObject({ points: 0, streak: 0, multiplier: 1 })
+  it('multiplies back-to-back ruby spins and caps the multiplier', () => {
+    expect(evaluateSpin(['ruby', 'gear', 'test'], 1)).toMatchObject({ multiplier: 2, points: RUBY_POINTS[1] * 2, streak: 2 })
+    expect(evaluateSpin(['ruby', 'gear', 'test'], 2).multiplier).toBe(MAX_MULTIPLIER)
+    expect(evaluateSpin(['ruby', 'gear', 'test'], 10).multiplier).toBe(MAX_MULTIPLIER)
   })
 
   it('costs a flat amount per bug, three bugs included', () => {
     expect(evaluateSpin(['bug', 'rails', 'gear'], 2)).toMatchObject({ outcome: 'bugged', points: -BUG_PENALTY, streak: 0 })
-    expect(evaluateSpin(['bug', 'bug', 'ruby'], 0)).toMatchObject({ outcome: 'bugged', points: -2 * BUG_PENALTY })
-    expect(evaluateSpin(['bug', 'bug', 'bug'], 3)).toMatchObject({ outcome: 'bug', points: -3 * BUG_PENALTY, streak: 0 })
+    expect(evaluateSpin(['bug', 'bug', 'gear'], 0)).toMatchObject({ outcome: 'bugged', points: -2 * BUG_PENALTY })
+    expect(evaluateSpin(['bug', 'bug', 'bug'], 2)).toMatchObject({ outcome: 'bug', points: -3 * BUG_PENALTY, streak: 0 })
   })
 
-  it('subtracts a bug from a match and breaks the streak', () => {
-    expect(evaluateSpin(['rails', 'rails', 'bug'], 0)).toMatchObject({ outcome: 'pair', points: 0, bugs: 1, streak: 0 })
-    // The multiplier applies to the match only: 10 x3 - 10.
-    expect(evaluateSpin(['rails', 'bug', 'rails'], 2)).toMatchObject({ multiplier: 3, points: PAYOUTS.pair * 3 - BUG_PENALTY, streak: 0 })
+  it('subtracts a bug from rubies and breaks the streak', () => {
+    expect(evaluateSpin(['ruby', 'rails', 'bug'], 0)).toMatchObject({ outcome: 'ruby', points: 0, bugs: 1, streak: 0 })
+    // The multiplier applies to the rubies only: 30 x3 - 10.
+    expect(evaluateSpin(['ruby', 'bug', 'ruby'], 2)).toMatchObject({ multiplier: 3, points: RUBY_POINTS[2] * 3 - BUG_PENALTY, streak: 0 })
   })
 })
 

@@ -19,22 +19,21 @@ export const GAME = {
   name: 'Ruby Slots',
   short: 'Stop on three rubies',
   howTo:
-    'Pull the lever, then hit Stop on each reel. 2 alike = 10, 3 alike = 50, 💎 pays double. Streaks multiply matches. Each 🐛 is −10 and breaks your streak.',
+    'Pull the lever, then stop each reel on 💎. Only rubies score: 1 = 10, 2 = 30, 3 = 100. Rubies on back-to-back spins pay ×2, then ×3. Each 🐛 is −10 and breaks your streak.',
   keyHint: 'Keyboard: ↓ pulls the lever, Space or Enter stops a reel.',
   stop: 'Stop',
 }
 
 export const OUTCOME_COPY: Record<Outcome, string> = {
   jackpot: 'Three rubies!',
-  triple: 'Triple!',
-  rubyPair: 'Ruby pair!',
-  pair: 'Pair',
+  rubyPair: 'Two rubies!',
+  ruby: 'One ruby',
   bug: 'Production outage!',
   bugged: 'Bug shipped. Streak lost.',
-  miss: 'No match. Streak lost.',
+  miss: 'No ruby. Streak lost.',
 }
 
-// Added when a match also had a bug on the line.
+// Added when rubies also had a bug on the line.
 export const STREAK_LOST = 'Streak lost.'
 
 // Shown when the player uses the wrong control.

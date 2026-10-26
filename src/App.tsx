@@ -61,7 +61,6 @@ export default function App() {
         >
           <SlotMachine
             view={view}
-            initialOffsets={initialOffsets}
             pull={pull}
             stop={stop}
             reset={reset}

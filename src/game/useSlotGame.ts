@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { REEL_MIN_SPIN_MS, REEL_SPEED_FACTORS, REEL_STRIPS, RESULT_PAUSE_MS, ROUND_MS, SETTLE_MS } from './rules'
+import { REEL_COUNT, REEL_MIN_SPIN_MS, REEL_SPEED_FACTORS, RESULT_PAUSE_MS, ROUND_MS, SETTLE_MS, STRIP_LENGTH, SYMBOLS } from './rules'
 import { evaluateSpin, speedForScore, type SpinResult } from './scoring'
-import { snapTarget, symbolAt, wrap } from './reels'
+import { createTapes, snapTarget, symbolAt, windowCells, WINDOW_CELLS, type Tape } from './reels'
 
 // Game state lives in a ref so the animation loop can read and write it every frame.
 // React only sees `GameView` snapshots, published on game events and timer ticks.
@@ -81,15 +81,26 @@ function prefersReducedMotion(): boolean {
 }
 
 export function randomOffsets(): number[] {
-  return REEL_STRIPS.map((strip) => Math.floor(Math.random() * strip.length))
+  return Array.from({ length: REEL_COUNT }, () => Math.floor(Math.random() * STRIP_LENGTH))
 }
 
-export function stripTransform(offset: number, stripLength: number): string {
-  // The rendered strip has stripLength + 3 cells; translateY % is relative to the strip's own height.
-  return `translate3d(0, ${(-wrap(offset, stripLength) / (stripLength + 3)) * 100}%, 0)`
+// Draws a reel at an offset: rewrites its WINDOW_CELLS glyphs when the reel reaches a new symbol,
+// then shifts them by the fraction in between. translateY % is relative to the strip's own height.
+export function paintReel(el: HTMLElement, tape: Tape, offset: number) {
+  const base = Math.floor(offset)
+  if (el.dataset.base !== String(base)) {
+    el.dataset.base = String(base)
+    windowCells(tape, offset).forEach((symbol, i) => {
+      const cell = el.children[i]
+      if (cell) cell.textContent = SYMBOLS[symbol].glyph
+    })
+  }
+  el.style.transform = `translate3d(0, ${(-(offset - base) / WINDOW_CELLS) * 100}%, 0)`
 }
 
-export function useSlotGame(initialOffsets: readonly number[]) {
+// `tapes` is injectable so tests can control which symbols land.
+export function useSlotGame(initialOffsets: readonly number[], tapes?: readonly Tape[]) {
+  const [reelTapes] = useState(() => tapes ?? createTapes())
   const game = useRef<GameState>(newGame())
   const reels = useRef<ReelMotion[]>(
     initialOffsets.map((offset) => ({ offset, stopped: true, settleFrom: offset, settleTo: offset, settleStart: 0 })),
@@ -108,8 +119,8 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     reel.settleStart = prefersReducedMotion() ? now - SETTLE_MS : now
     g.stoppedCount += 1
 
-    if (g.stoppedCount === REEL_STRIPS.length) {
-      const landed = reels.current.map((r, i) => symbolAt(REEL_STRIPS[i], r.settleTo))
+    if (g.stoppedCount === REEL_COUNT) {
+      const landed = reels.current.map((r, i) => symbolAt(reelTapes[i], r.settleTo))
       const result = evaluateSpin([landed[0], landed[1], landed[2]], g.streak)
       // Bug penalties can't take a round below zero.
       g.score = Math.max(0, g.score + result.points)
@@ -120,7 +131,7 @@ export function useSlotGame(initialOffsets: readonly number[]) {
       g.phase = 'scored'
       g.unlockAt = now + RESULT_PAUSE_MS
     }
-  }, [])
+  }, [reelTapes])
 
   const finish = useCallback(
     (now: number) => {
@@ -130,13 +141,13 @@ export function useSlotGame(initialOffsets: readonly number[]) {
       reels.current.forEach((reel, i) => {
         reel.offset = reel.settleTo
         const el = stripEls.current[i]
-        if (el) el.style.transform = stripTransform(reel.offset, REEL_STRIPS[i].length)
+        if (el) paintReel(el, reelTapes[i], reel.offset)
       })
       g.phase = 'over'
       g.attemptId = crypto.randomUUID()
       publish()
     },
-    [publish, stopNextReel],
+    [publish, stopNextReel, reelTapes],
   )
 
   // The lever starts every spin; Stop only stops reels. Each returns whether the input counted,
@@ -171,12 +182,12 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     reels.current = reels.current.map((reel, i) => {
       const offset = reel.stopped ? reel.settleTo : snapTarget(reel.offset)
       const el = stripEls.current[i]
-      if (el) el.style.transform = stripTransform(offset, REEL_STRIPS[i].length)
+      if (el) paintReel(el, reelTapes[i], offset)
       return { offset, stopped: true, settleFrom: offset, settleTo: offset, settleStart: 0 }
     })
     game.current = newGame()
     publish()
-  }, [publish])
+  }, [publish, reelTapes])
 
   const running = view.phase === 'spinning' || view.phase === 'scored'
 
@@ -207,7 +218,7 @@ export function useSlotGame(initialOffsets: readonly number[]) {
           reel.offset = t === 1 ? reel.settleTo : reel.settleFrom + (reel.settleTo - reel.settleFrom) * eased
         }
         const el = stripEls.current[i]
-        if (el) el.style.transform = stripTransform(reel.offset, REEL_STRIPS[i].length)
+        if (el) paintReel(el, reelTapes[i], reel.offset)
       })
 
       // Re-render on each tenth of a second, and when the pull lock lifts.
@@ -223,11 +234,16 @@ export function useSlotGame(initialOffsets: readonly number[]) {
 
     frame = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(frame)
-  }, [running, finish, publish])
+  }, [running, finish, publish, reelTapes])
 
-  const setStripEl = useCallback((index: number, el: HTMLDivElement | null) => {
-    stripEls.current[index] = el
-  }, [])
+  // Paints as soon as a reel mounts, so the first frame already shows symbols.
+  const setStripEl = useCallback(
+    (index: number, el: HTMLDivElement | null) => {
+      stripEls.current[index] = el
+      if (el) paintReel(el, reelTapes[index], reels.current[index].offset)
+    },
+    [reelTapes],
+  )
 
   return { view, pull, stop, reset, setStripEl }
 }

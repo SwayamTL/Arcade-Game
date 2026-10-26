@@ -9,7 +9,7 @@ This README explains how the pieces fit together. Commands, environment variable
 ### Playing a round
 1. **Pull the lever** (`Lever.tsx`, drag or tap, or ↓ on a keyboard). `useSlotGame.pull()` starts the 45 s timer and spins the reels.
 2. **Hit Stop** (the Stop button, Space or Enter). `useSlotGame.stop()` stops the next reel, left to right. Presses in the first 350 ms of a spin are ignored.
-3. **Scoring: add up the line.** After the third reel, `scoring.ts` scores the payline as *match points × streak multiplier − 10 per 🐛*. A pair is 10, a triple 50, and 💎 pays double (20 / 100). A match grows the streak (×2, ×3, then ×4 at most), and any 🐛 or a miss resets it. So 🚂🚂🐛 with no streak nets 0, and 🐛🐛🐛 is −30. The round score never drops below 0. The status line shows the sum, e.g. `Pair +20 (×2) · 🐛 −10 = +10 Streak lost.`
+3. **Scoring: add up the line.** After the third reel, `scoring.ts` scores the payline as *ruby points × streak multiplier − 10 per 🐛*. Only rubies score: one 💎 is 10, two 30, three 100, and every other symbol is 0 (so 🚀🚀🚀 scores nothing). Each rotation of a reel is 8 symbols: 💎, 🐛 and two fillers in any order (so the 🐛 can sit right next to the 💎), then the four fillers. Each reel reshuffles after every 2 rotations, mid-spin included, so players have to watch instead of learning the order. No symbol repeats within 3 places. A spin with a ruby grows the streak (×2, then ×3 at most), and a spin with no ruby or any 🐛 resets it. So 💎🚂🐛 with no streak nets 0, and 🐛🐛🐛 is −30. The round score never drops below 0. The status line shows the sum, e.g. `One ruby +20 (×2) · 🐛 −10 = +10 Streak lost.`
 4. **The next spin needs the lever again.** Using the wrong control shakes the right one (`feedback.ts`) and shows a hint. It never costs points.
 5. **The round ends.** When the timer runs out, `useSlotGame` creates an `attemptId` and `SlotMachine` shows `ResultPanel` over the reels.
 
@@ -42,16 +42,16 @@ Each entry says what the file does, what it affects, and when you'd change it.
 ### `src/game/` (Ruby Slots rules and engine, no UI)
 | File | What it does | Change it to… |
 |---|---|---|
-| `rules.ts` | **Every tunable number**: reel strips, symbols, round length, payouts (pair, triple, ruby factor), bug penalty, multiplier cap, speed levels, minimum spin time, lever pull threshold, the staff reset hold time, and `MAX_PLAUSIBLE_SCORE` (used by the server). | Rebalance the game. Start here. |
+| `rules.ts` | **Every tunable number**: reel layout (rotation length, fillers, reshuffle interval, repeat gap), symbols, round length, ruby payouts (`RUBY_POINTS`), bug penalty, multiplier cap, speed levels, minimum spin time, lever pull threshold, the staff reset hold time, and `MAX_PLAUSIBLE_SCORE` (used by the server). | Rebalance the game. Start here. |
 | `scoring.ts` | Pure functions: name the payline (for the status text), add up its points and streak, pick reel speed for a score. | Change *how* spins are scored (not just the numbers). |
-| `reels.ts` | Reel position helpers: wrapping, snapping to the nearest symbol, the cells to render. | Change how reels land or render. |
-| `useSlotGame.ts` | The game state machine (`ready → spinning → scored → … → over`), the timer, the animation loop, `pull`/`stop`/`reset` (reset works from any phase). | Change round flow, timing or what counts as valid input. |
+| `reels.ts` | Each reel's endless "tape" of shuffled arrangements (`createTape`), plus position helpers: snapping to the nearest symbol and the 5 cells a reel window shows. | Change the reel layout, the shuffle or how reels land. |
+| `useSlotGame.ts` | The game state machine (`ready → spinning → scored → … → over`), the timer, the animation loop, `pull`/`stop`/`reset` (reset works from any phase), and `paintReel`, which writes each reel's glyphs and position to the DOM. | Change round flow, timing or what counts as valid input. |
 
 ### `src/components/` (UI)
 | File | What it does | Change it to… |
 |---|---|---|
 | `SlotMachine.tsx` | The machine: score/timer header, reels, lever, status line, Stop button. Holds the keyboard shortcuts and wrong-control hints. Its title is wrapped in `StaffReset`. Sizes the reels for fullscreen. | Change the machine's look or controls. |
-| `Reel.tsx` | One reel window. Its strip is moved by the game loop, not by React. | Change reel visuals. |
+| `Reel.tsx` | One reel window with 5 cells. The game loop fills and moves them (`paintReel`), not React, because the order changes as the reel turns. | Change reel visuals. |
 | `Lever.tsx` | The draggable lever. Travel is measured from the rendered track. States: `ready` (can be pulled), `busy` (pressing it is a wrong move), `off`. | Change the lever's feel or pull threshold behaviour. |
 | `feedback.ts` | `nudge` (shake, or an outline pulse with reduced motion) and `buzz` (vibration, Android only). | Change wrong-input or haptic feedback. |
 | `StaffReset.tsx` | Hidden staff control: holding its child (the machine title) for `STAFF_RESET_HOLD_MS` resets the round. | Change the staff reset gesture. |
@@ -84,7 +84,7 @@ The schema in SQL: the `game_submissions` table (row-level security on, no polic
 Tests sit next to the file they test (`Lever.tsx` → `Lever.test.tsx`), with one exception: `netlify/lib/handlers.test.ts`, because `functions/` can't hold tests. Logic tests run in Node. Component and hook tests start with `// @vitest-environment jsdom`. Run them with `npm test`.
 
 ## How do I…
-- **Rebalance the game** (payouts, timer, speed, bug penalty): edit `src/game/rules.ts`. `MAX_PLAUSIBLE_SCORE` is calculated from the round length, the result pause, three rubies (`PAYOUTS.triple × RUBY_FACTOR`) and the multiplier cap. If you add a way to score more per spin than three rubies, update that formula, or the server will reject real scores. Update the how-to text in `copy.ts` if a rule players can see has changed.
+- **Rebalance the game** (payouts, timer, speed, bug penalty): edit `src/game/rules.ts`. `MAX_PLAUSIBLE_SCORE` is calculated from the round length, the result pause, three rubies (`RUBY_POINTS[3]`) and the multiplier cap. If you add a way to score more per spin than three rubies, update that formula, or the server will reject real scores. Update the how-to text in `copy.ts` if a rule players can see has changed.
 - **Change any text**: `src/content/copy.ts`.
 - **Change colours or fonts**: the tokens in `src/index.css` `@theme` only.
 - **Change the lever feel**: `LEVER_PULL_FRACTION` in `rules.ts`, the snap-back and tap animation in `Lever.tsx`.

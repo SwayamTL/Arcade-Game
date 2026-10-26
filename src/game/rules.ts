@@ -11,12 +11,18 @@ export const SYMBOLS = {
 
 export type SymbolId = keyof typeof SYMBOLS
 
-// One ruby per reel keeps the jackpot a timing challenge. Each reel has its own order.
-export const REEL_STRIPS: readonly (readonly SymbolId[])[] = [
-  ['ruby', 'rails', 'bug', 'gear', 'test', 'deploy', 'rails', 'bug', 'gear', 'test', 'deploy', 'rails'],
-  ['gear', 'ruby', 'deploy', 'bug', 'rails', 'test', 'gear', 'deploy', 'bug', 'rails', 'test', 'gear'],
-  ['test', 'deploy', 'rails', 'ruby', 'bug', 'gear', 'test', 'rails', 'deploy', 'bug', 'gear', 'test'],
-]
+export const REEL_COUNT = 3
+
+// A reel is a run of shuffled 8-symbol arrangements (see reels.ts). The first 4 symbols hold the
+// ruby, the bug (each a 1 in 8 chance) and two fillers in any order; the last 4 are the four fillers.
+export const STRIP_LENGTH = 8
+export const FILLERS = ['rails', 'gear', 'test', 'deploy'] as const satisfies readonly SymbolId[]
+
+// Each reel reshuffles after this many rotations, so players can't learn the order.
+export const SHUFFLE_EVERY_ROTATIONS = 2
+
+// Two copies of a filler are at least this many symbols apart.
+export const MIN_REPEAT_GAP = 3
 
 export const ROUND_MS = 45_000
 
@@ -30,22 +36,16 @@ export const REEL_MIN_SPIN_MS = 350
 // Time for a stopped reel to ease onto the nearest symbol.
 export const SETTLE_MS = 120
 
-// Scoring adds up the line: a match pays (times the streak multiplier), then each bug costs
-// BUG_PENALTY. So a pair with a bug and no streak nets 0.
-export const PAYOUTS = {
-  pair: 10,
-  triple: 50,
-} as const
-
-// Ruby matches pay this many times a normal match: a ruby pair 20, three rubies 100.
-export const RUBY_FACTOR = 2
+// Only rubies score. Points for 0, 1, 2 or 3 rubies on the payline, before the streak
+// multiplier; every other symbol is worth 0. Each bug then costs BUG_PENALTY.
+export const RUBY_POINTS = [0, 10, 30, 100] as const
 
 // Points lost for each bug on the payline, never multiplied. Any bug also breaks the streak.
 // This keeps blind mashing below a beginner who aims; a round's score never drops below 0.
 export const BUG_PENALTY = 10
 
-// Multiplier for the Nth consecutive scoring spin: x1, x2, x3, then capped at x4.
-export const MAX_MULTIPLIER = 4
+// Multiplier for the Nth consecutive spin with a ruby: x1, x2, then capped at x3.
+export const MAX_MULTIPLIER = 3
 
 // Reel speed in symbols per second, stepping up once the score passes each threshold.
 export const SPEED_LEVELS: readonly { minScore: number; symbolsPerSecond: number }[] = [
@@ -59,9 +59,8 @@ export const SPEED_LEVELS: readonly { minScore: number; symbolsPerSecond: number
 export const REEL_SPEED_FACTORS = [1, 1.07, 1.14] as const
 
 // Upper bound used by the server to reject impossible scores. Every spin takes at least
-// RESULT_PAUSE_MS, so this assumes a ruby jackpot at max multiplier on every possible spin.
-export const MAX_PLAUSIBLE_SCORE =
-  Math.ceil(ROUND_MS / RESULT_PAUSE_MS) * PAYOUTS.triple * RUBY_FACTOR * MAX_MULTIPLIER
+// RESULT_PAUSE_MS, so this assumes three rubies at max multiplier on every possible spin.
+export const MAX_PLAUSIBLE_SCORE = Math.ceil(ROUND_MS / RESULT_PAUSE_MS) * RUBY_POINTS[3] * MAX_MULTIPLIER
 
 // A lever drag spins once the knob passes this fraction of its track. A tap always spins.
 export const LEVER_PULL_FRACTION = 0.5

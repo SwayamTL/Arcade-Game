@@ -2,7 +2,7 @@
 // lever, status line and Stop button, plus keyboard shortcuts and wrong-control hints.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { GAME, NUDGE, OUTCOME_COPY, STREAK_LOST } from '../content/copy'
-import { BUG_PENALTY, REEL_STRIPS, ROUND_MS } from '../game/rules'
+import { BUG_PENALTY, REEL_COUNT, ROUND_MS } from '../game/rules'
 import type { GameView } from '../game/useSlotGame'
 import { multiplierFor, type SpinResult } from '../game/scoring'
 import { buzz, nudge } from './feedback'
@@ -12,7 +12,6 @@ import { StaffReset } from './StaffReset'
 
 interface SlotMachineProps {
   view: GameView
-  initialOffsets: readonly number[]
   // Each returns whether the input counted.
   pull: () => boolean
   stop: () => boolean
@@ -30,7 +29,7 @@ const NUDGE_MS = 1800
 
 const signed = (n: number) => (n < 0 ? `−${-n}` : n > 0 ? `+${n}` : '0')
 
-// Shows how the spin added up, e.g. "Pair +20 (×2) · 🐛 −10 = +10 Streak lost."
+// Shows how the spin added up, e.g. "One ruby +20 (×2) · 🐛 −10 = +10 Streak lost."
 function SpinBreakdown({ spin }: { spin: SpinResult }) {
   const matched = spin.matchPoints > 0
   const mixed = matched && spin.bugs > 0
@@ -67,7 +66,6 @@ function leverState(view: GameView): LeverState {
 
 export function SlotMachine({
   view,
-  initialOffsets,
   pull,
   stop,
   reset,
@@ -173,12 +171,10 @@ export function SlotMachine({
           }`}
         >
           <div className="relative flex flex-1 gap-2 rounded-2xl border-2 border-ink bg-ink p-2 sm:gap-3 sm:p-3">
-            {REEL_STRIPS.map((strip, i) => (
+            {Array.from({ length: REEL_COUNT }, (_, i) => (
               <Reel
                 key={i}
                 index={i}
-                strip={strip}
-                initialOffset={initialOffsets[i]}
                 stopped={view.phase === 'spinning' ? i < view.stoppedCount : true}
                 setStripEl={setStripEl}
               />

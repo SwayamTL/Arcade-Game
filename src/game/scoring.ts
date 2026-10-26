@@ -1,40 +1,32 @@
-import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, RUBY_FACTOR, SPEED_LEVELS, type SymbolId } from './rules'
+// Pure scoring for Ruby Slots: names a payline, adds up its points and streak, and picks reel
+// speed for a score. Only rubies score; the numbers come from rules.ts.
+import { BUG_PENALTY, MAX_MULTIPLIER, RUBY_POINTS, SPEED_LEVELS, type SymbolId } from './rules'
 
-// Names the line for the status text. 'bug' is three bugs; 'bugged' is no match but at least one bug.
-export type Outcome = 'jackpot' | 'triple' | 'rubyPair' | 'pair' | 'bug' | 'bugged' | 'miss'
+// Names the line for the status text. 'bug' is three bugs; 'bugged' is no ruby but at least one bug.
+export type Outcome = 'jackpot' | 'rubyPair' | 'ruby' | 'bug' | 'bugged' | 'miss'
 
-// A spin adds up its line: matchPoints × multiplier − bugs × BUG_PENALTY.
+// A spin adds up its line: rubyPoints × multiplier − bugs × BUG_PENALTY.
 export interface SpinResult {
   outcome: Outcome
-  // What the match is worth before the multiplier; 0 when nothing matched.
+  // What the rubies are worth before the multiplier; 0 when there are none.
   matchPoints: number
   multiplier: number
   bugs: number
   points: number
-  // Consecutive scoring spins after this one; 0 means the streak was broken.
+  // Consecutive spins with a ruby after this one; 0 means the streak was broken.
   streak: number
 }
 
-export function classify([a, b, c]: readonly [SymbolId, SymbolId, SymbolId]): Outcome {
-  if (a === b && b === c) {
-    if (a === 'ruby') return 'jackpot'
-    if (a === 'bug') return 'bug'
-    return 'triple'
-  }
-  const pairSymbol = a === b || a === c ? a : b === c ? b : null
-  if (pairSymbol === 'ruby') return 'rubyPair'
-  if (pairSymbol && pairSymbol !== 'bug') return 'pair'
-  return [a, b, c].includes('bug') ? 'bugged' : 'miss'
-}
+const count = (line: readonly SymbolId[], symbol: SymbolId) => line.filter((s) => s === symbol).length
 
-const MATCH_POINTS: Record<Outcome, number> = {
-  jackpot: PAYOUTS.triple * RUBY_FACTOR,
-  triple: PAYOUTS.triple,
-  rubyPair: PAYOUTS.pair * RUBY_FACTOR,
-  pair: PAYOUTS.pair,
-  bug: 0,
-  bugged: 0,
-  miss: 0,
+export function classify(line: readonly [SymbolId, SymbolId, SymbolId]): Outcome {
+  const rubies = count(line, 'ruby')
+  if (rubies === 3) return 'jackpot'
+  if (rubies === 2) return 'rubyPair'
+  if (rubies === 1) return 'ruby'
+  const bugs = count(line, 'bug')
+  if (bugs === 3) return 'bug'
+  return bugs > 0 ? 'bugged' : 'miss'
 }
 
 export function multiplierFor(streak: number): number {
@@ -45,17 +37,16 @@ export function evaluateSpin(
   symbols: readonly [SymbolId, SymbolId, SymbolId],
   streak: number,
 ): SpinResult {
-  const outcome = classify(symbols)
-  const matchPoints = MATCH_POINTS[outcome]
-  const bugs = symbols.filter((s) => s === 'bug').length
+  const matchPoints = RUBY_POINTS[count(symbols, 'ruby')]
+  const bugs = count(symbols, 'bug')
   const multiplier = matchPoints > 0 ? multiplierFor(streak) : 1
   return {
-    outcome,
+    outcome: classify(symbols),
     matchPoints,
     multiplier,
     bugs,
     points: matchPoints * multiplier - bugs * BUG_PENALTY,
-    // A match grows the streak; any bug breaks it.
+    // A ruby grows the streak; any bug breaks it.
     streak: matchPoints > 0 && bugs === 0 ? streak + 1 : 0,
   }
 }

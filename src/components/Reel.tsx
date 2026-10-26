@@ -1,17 +1,14 @@
-import { SYMBOLS, type SymbolId } from '../game/rules'
-import { renderCells } from '../game/reels'
-import { stripTransform } from '../game/useSlotGame'
+// One reel window on the machine. Its cells are filled and moved by the game loop (`paintReel`
+// in useSlotGame), not by React, because the reel's symbol order changes as it turns.
+import { WINDOW_CELLS } from '../game/reels'
 
 interface ReelProps {
   index: number
-  strip: readonly SymbolId[]
-  initialOffset: number
   stopped: boolean
   setStripEl: (index: number, el: HTMLDivElement | null) => void
 }
 
-// The strip's transform is driven directly by the game loop, not by React renders.
-export function Reel({ index, strip, initialOffset, stopped, setStripEl }: ReelProps) {
+export function Reel({ index, stopped, setStripEl }: ReelProps) {
   return (
     <div
       className={`relative h-[calc(var(--cell)*3)] flex-1 overflow-hidden rounded-xl border-2 bg-surface transition-colors ${
@@ -19,18 +16,12 @@ export function Reel({ index, strip, initialOffset, stopped, setStripEl }: ReelP
       }`}
       aria-hidden="true"
     >
-      <div
-        ref={(el) => setStripEl(index, el)}
-        className="will-change-transform"
-        style={{ transform: stripTransform(initialOffset, strip.length) }}
-      >
-        {renderCells(strip).map((symbol, i) => (
+      <div ref={(el) => setStripEl(index, el)} className="will-change-transform">
+        {Array.from({ length: WINDOW_CELLS }, (_, i) => (
           <div
             key={i}
             className="flex h-[var(--cell)] items-center justify-center text-[calc(var(--cell)*0.55)] leading-none select-none"
-          >
-            {SYMBOLS[symbol].glyph}
-          </div>
+          />
         ))}
       </div>
       {/* Fade the rows above and below the payline. */}

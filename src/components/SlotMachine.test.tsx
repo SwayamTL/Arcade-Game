@@ -40,7 +40,6 @@ function setup(view: GameView, stopAccepted = view.phase === 'spinning') {
   render(
     <SlotMachine
       view={view}
-      initialOffsets={[0, 0, 0]}
       pull={pull}
       stop={stop}
       reset={() => {}}
@@ -108,23 +107,23 @@ describe('SlotMachine controls', () => {
     expect(screen.getByText('🐛 −10', { exact: false }).className).toContain('text-danger')
   })
 
-  it('shows how a match with a bug adds up', () => {
+  it('shows how rubies with a bug add up', () => {
     setup({
       ...ready,
       phase: 'scored',
-      lastSpin: { outcome: 'pair', matchPoints: 10, multiplier: 2, bugs: 1, points: 10, streak: 0 },
+      lastSpin: { outcome: 'ruby', matchPoints: 10, multiplier: 2, bugs: 1, points: 10, streak: 0 },
     })
-    const line = screen.getByText('Pair').parentElement!
-    expect(line.textContent).toBe('Pair +20 (×2) · 🐛 −10 = +10 Streak lost.')
+    const line = screen.getByText('One ruby').parentElement!
+    expect(line.textContent).toBe('One ruby +20 (×2) · 🐛 −10 = +10 Streak lost.')
   })
 
-  it('shows a cancelled-out match as = 0', () => {
+  it('shows a cancelled-out ruby as = 0', () => {
     setup({
       ...ready,
       phase: 'scored',
-      lastSpin: { outcome: 'pair', matchPoints: 10, multiplier: 1, bugs: 1, points: 0, streak: 0 },
+      lastSpin: { outcome: 'ruby', matchPoints: 10, multiplier: 1, bugs: 1, points: 0, streak: 0 },
     })
-    expect(screen.getByText('Pair').parentElement!.textContent).toBe('Pair +10 · 🐛 −10 = 0 Streak lost.')
+    expect(screen.getByText('One ruby').parentElement!.textContent).toBe('One ruby +10 · 🐛 −10 = 0 Streak lost.')
   })
 
   it('shakes Stop when the lever is used mid-spin', () => {

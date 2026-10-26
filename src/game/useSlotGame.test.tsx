@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { REEL_MIN_SPIN_MS } from './rules'
+import { createTapes } from './reels'
+import { REEL_MIN_SPIN_MS, STRIP_LENGTH, type SymbolId } from './rules'
 import { useSlotGame } from './useSlotGame'
 
-// Strip indexes of a bug on each reel. With the animation loop stubbed out the reels don't
-// move, so every stop lands exactly where the round started.
-const BUGS = [2, 3, 4]
-const NO_BUGS = [1, 0, 2]
+// Fixed tapes (a simple seeded rng), and the index of a bug or a filler on each. With the
+// animation loop stubbed out the reels don't move, so every stop lands where the round started.
+let seed = 7
+const TAPES = createTapes(() => (seed = (seed * 9301 + 49297) % 233280) / 233280)
+const find = (match: (s: SymbolId) => boolean) =>
+  TAPES.map((tape) => Array.from({ length: STRIP_LENGTH }, (_, n) => n).find((n) => match(tape.at(n)))!)
+const BUGS = find((s) => s === 'bug')
+const NO_BUGS = find((s) => s !== 'bug' && s !== 'ruby')
 
 let now = 1000
 beforeEach(() => {
@@ -29,7 +34,7 @@ function stopAll(game: { current: ReturnType<typeof useSlotGame> }) {
 
 describe('useSlotGame', () => {
   it('only starts a round from a pull', () => {
-    const { result } = renderHook(() => useSlotGame(NO_BUGS))
+    const { result } = renderHook(() => useSlotGame(NO_BUGS, TAPES))
     let accepted = true
     act(() => void (accepted = result.current.stop()))
     expect(accepted).toBe(false)
@@ -43,7 +48,7 @@ describe('useSlotGame', () => {
   })
 
   it('ignores Stop until the reels have spun for a moment', () => {
-    const { result } = renderHook(() => useSlotGame(NO_BUGS))
+    const { result } = renderHook(() => useSlotGame(NO_BUGS, TAPES))
     act(() => void result.current.pull())
     let accepted = true
     now += REEL_MIN_SPIN_MS - 1
@@ -58,7 +63,7 @@ describe('useSlotGame', () => {
   })
 
   it('never lets bug penalties take the score below zero', () => {
-    const { result } = renderHook(() => useSlotGame(BUGS))
+    const { result } = renderHook(() => useSlotGame(BUGS, TAPES))
     act(() => void result.current.pull())
     now += REEL_MIN_SPIN_MS
     stopAll(result)
@@ -68,7 +73,7 @@ describe('useSlotGame', () => {
   })
 
   it('resets mid-spin to a fresh round that a pull can start', () => {
-    const { result } = renderHook(() => useSlotGame(NO_BUGS))
+    const { result } = renderHook(() => useSlotGame(NO_BUGS, TAPES))
     act(() => void result.current.pull())
     now += REEL_MIN_SPIN_MS
     act(() => void result.current.stop())
