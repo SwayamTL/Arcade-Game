@@ -1,3 +1,5 @@
+// Page layout: header, game tile, the slot machine with its result overlay, and the leaderboard.
+// Owns the game hook and fullscreen state.
 import { useRef, useState } from 'react'
 import railsFactorySymbolGreen from './assets/brand/railsfactory-symbol-green.svg'
 import { FullscreenButton, FullscreenIcon } from './components/FullscreenButton'
@@ -62,6 +64,7 @@ export default function App() {
             initialOffsets={initialOffsets}
             pull={pull}
             stop={stop}
+            reset={reset}
             setStripEl={setStripEl}
             fill={fill}
             fullscreenControl={

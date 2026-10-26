@@ -66,4 +66,18 @@ describe('useSlotGame', () => {
     expect(result.current.view.lastSpin!.points).toBeLessThan(0)
     expect(result.current.view.score).toBe(0)
   })
+
+  it('resets mid-spin to a fresh round that a pull can start', () => {
+    const { result } = renderHook(() => useSlotGame(NO_BUGS))
+    act(() => void result.current.pull())
+    now += REEL_MIN_SPIN_MS
+    act(() => void result.current.stop())
+    act(() => result.current.reset())
+    expect(result.current.view).toMatchObject({ phase: 'ready', score: 0, stoppedCount: 0, attemptId: null })
+
+    let accepted = false
+    act(() => void (accepted = result.current.pull()))
+    expect(accepted).toBe(true)
+    expect(result.current.view.phase).toBe('spinning')
+  })
 })

@@ -43,6 +43,7 @@ function setup(view: GameView, stopAccepted = view.phase === 'spinning') {
       initialOffsets={[0, 0, 0]}
       pull={pull}
       stop={stop}
+      reset={() => {}}
       setStripEl={() => {}}
       resultPanel={null}
       fill={false}

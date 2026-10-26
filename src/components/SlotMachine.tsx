@@ -1,3 +1,5 @@
+// The slot machine UI: score/timer header (its title doubles as the hidden staff reset), reels,
+// lever, status line and Stop button, plus keyboard shortcuts and wrong-control hints.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { GAME, NUDGE, OUTCOME_COPY, STREAK_LOST } from '../content/copy'
 import { BUG_PENALTY, REEL_STRIPS, ROUND_MS } from '../game/rules'
@@ -6,6 +8,7 @@ import { multiplierFor, type SpinResult } from '../game/scoring'
 import { buzz, nudge } from './feedback'
 import { Lever, type LeverState } from './Lever'
 import { Reel } from './Reel'
+import { StaffReset } from './StaffReset'
 
 interface SlotMachineProps {
   view: GameView
@@ -13,6 +16,8 @@ interface SlotMachineProps {
   // Each returns whether the input counted.
   pull: () => boolean
   stop: () => boolean
+  // Staff-only: holding the title resets the round (see StaffReset).
+  reset: () => void
   setStripEl: (index: number, el: HTMLDivElement | null) => void
   // Rendered over the machine once the round is over.
   resultPanel: ReactNode
@@ -65,6 +70,7 @@ export function SlotMachine({
   initialOffsets,
   pull,
   stop,
+  reset,
   setStripEl,
   resultPanel,
   fullscreenControl,
@@ -129,7 +135,9 @@ export function SlotMachine({
       aria-label={GAME.name}
     >
       <header className="flex items-center justify-between gap-4 px-5 pt-4 pb-3 text-white sm:px-7">
-        <h2 className="text-xl font-medium sm:text-2xl">{GAME.name}</h2>
+        <StaffReset onReset={reset}>
+          <h2 className="text-xl font-medium sm:text-2xl">{GAME.name}</h2>
+        </StaffReset>
         <div className="flex items-center gap-3 sm:gap-5">
           <dl className="flex items-baseline gap-5 font-mono tabular-nums">
             <div className="flex items-baseline gap-2">

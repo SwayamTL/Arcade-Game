@@ -65,3 +65,7 @@ export const MAX_PLAUSIBLE_SCORE =
 
 // A lever drag spins once the knob passes this fraction of its track. A tap always spins.
 export const LEVER_PULL_FRACTION = 0.5
+
+// Staff reset: holding the machine's title this long ends the current round or result screen
+// without saving, e.g. when a player walks away. Long enough that players won't trigger it.
+export const STAFF_RESET_HOLD_MS = 3000

@@ -69,7 +69,6 @@ export const FORM = {
   submit: 'Submit score',
   submitting: 'Saving…',
   retry: 'Try again',
-  skip: 'Skip, next player',
 }
 
 export const FULLSCREEN = {

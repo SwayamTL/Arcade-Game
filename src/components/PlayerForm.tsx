@@ -1,3 +1,5 @@
+// End-of-round name/email form: validates, submits the score and retries with the same attemptId.
+// Submitting is the only way past it (no skip), so every round feeds the booth's email list.
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { submitScore } from '../api/client'
 import { FORM } from '../content/copy'
@@ -7,13 +9,12 @@ interface PlayerFormProps {
   score: number
   attemptId: string
   onSubmitted: (rank: number | null) => void
-  onSkip: () => void
   submit?: typeof submitScore
 }
 
 type Status = { kind: 'idle' } | { kind: 'submitting' } | { kind: 'failed'; message: string }
 
-export function PlayerForm({ score, attemptId, onSubmitted, onSkip, submit = submitScore }: PlayerFormProps) {
+export function PlayerForm({ score, attemptId, onSubmitted, submit = submitScore }: PlayerFormProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [consent, setConsent] = useState(false)
@@ -134,14 +135,6 @@ export function PlayerForm({ score, attemptId, onSubmitted, onSkip, submit = sub
           className="rounded-xl border-2 border-ink bg-accent px-6 py-3 font-medium text-white disabled:opacity-60"
         >
           {submitting ? FORM.submitting : status.kind === 'failed' ? FORM.retry : FORM.submit}
-        </button>
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={submitting}
-          className="rounded-xl border-2 border-ink px-6 py-3 font-medium disabled:opacity-60"
-        >
-          {FORM.skip}
         </button>
       </div>
     </form>

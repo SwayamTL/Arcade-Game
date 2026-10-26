@@ -18,7 +18,7 @@ function fillValid() {
 describe('PlayerForm', () => {
   it('shows validation errors without calling the server', async () => {
     const submit = vi.fn()
-    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={vi.fn()} onSkip={vi.fn()} submit={submit} />)
+    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={vi.fn()} submit={submit} />)
     fireEvent.click(screen.getByRole('button', { name: 'Submit score' }))
     expect(await screen.findByText('Enter a name for the leaderboard.')).toBeTruthy()
     expect(screen.getByText('Please agree so we can store your score.')).toBeTruthy()
@@ -32,7 +32,7 @@ describe('PlayerForm', () => {
       .mockImplementationOnce(() => new Promise((r) => (resolveFirst = r)))
       .mockResolvedValueOnce({ kind: 'success', rank: 1 })
     const onSubmitted = vi.fn()
-    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={onSubmitted} onSkip={vi.fn()} submit={submit} />)
+    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={onSubmitted} submit={submit} />)
     fillValid()
 
     const button = screen.getByRole('button', { name: 'Submit score' })
@@ -54,7 +54,7 @@ describe('PlayerForm', () => {
 
   it('shows server field errors', async () => {
     const submit = vi.fn(async (): Promise<SubmitOutcome> => ({ kind: 'invalid', errors: { email: 'Server says no.' } }))
-    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={vi.fn()} onSkip={vi.fn()} submit={submit} />)
+    render(<PlayerForm score={10} attemptId={attemptId} onSubmitted={vi.fn()} submit={submit} />)
     fillValid()
     fireEvent.click(screen.getByRole('button', { name: 'Submit score' }))
     expect(await screen.findByText('Server says no.')).toBeTruthy()

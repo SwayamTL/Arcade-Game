@@ -166,7 +166,14 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     return true
   }, [publish, stopNextReel])
 
+  // Back to a fresh round from any phase. A reset mid-spin lands the reels on their nearest symbol.
   const reset = useCallback(() => {
+    reels.current = reels.current.map((reel, i) => {
+      const offset = reel.stopped ? reel.settleTo : snapTarget(reel.offset)
+      const el = stripEls.current[i]
+      if (el) el.style.transform = stripTransform(offset, REEL_STRIPS[i].length)
+      return { offset, stopped: true, settleFrom: offset, settleTo: offset, settleStart: 0 }
+    })
     game.current = newGame()
     publish()
   }, [publish])

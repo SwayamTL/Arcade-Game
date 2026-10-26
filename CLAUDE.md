@@ -10,10 +10,10 @@ React 19 + TypeScript + Vite 8, Tailwind CSS v4 (Vite plugin, CSS-first `@theme`
 
 ## Structure
 `README.md` has the full file map (what each file does, what it affects, when to change it) and the data flows. This list is the short version.
-- `src/game/rules.ts`: **every tunable game number** (strips, paytable and `RUBY_FACTOR`, bug penalty, timer, speed levels, multiplier cap, minimum spin time, lever pull threshold, `MAX_PLAUSIBLE_SCORE`). Change rules here.
+- `src/game/rules.ts`: **every tunable game number** (strips, paytable and `RUBY_FACTOR`, bug penalty, timer, speed levels, multiplier cap, minimum spin time, lever pull threshold, staff reset hold time, `MAX_PLAUSIBLE_SCORE`). Change rules here.
 - `src/game/scoring.ts`, `src/game/reels.ts`: pure logic, unit-tested.
 - `src/game/useSlotGame.ts`: game state machine + rAF loop. State lives in a ref, React gets `GameView` snapshots, and reel transforms are written straight to the DOM.
-- `src/components/`: `SlotMachine` (machine UI, keyboard shortcuts, wrong-control hints), `Reel`, `Lever` (pointer-drag lever), `feedback.ts` (shake/vibrate helpers), `ResultPanel`, `PlayerForm`, `Leaderboard`, `Header`, `FullscreenButton` + `useFullscreen` (Fullscreen API).
+- `src/components/`: `SlotMachine` (machine UI, keyboard shortcuts, wrong-control hints), `StaffReset` (hold the machine title to reset), `Reel`, `Lever` (pointer-drag lever), `feedback.ts` (shake/vibrate helpers), `ResultPanel`, `PlayerForm`, `Leaderboard`, `Header`, `FullscreenButton` + `useFullscreen` (Fullscreen API).
 - `src/content/copy.ts`: all UI text. Strings marked `REVIEW` need RailsFactory sign-off.
 - `src/shared/submission.ts`: validation + API types shared by the browser and the functions.
 - `src/api/client.ts`: browser calls to `/api/*`.
@@ -28,6 +28,8 @@ React 19 + TypeScript + Vite 8, Tailwind CSS v4 (Vite plugin, CSS-first `@theme`
 - Stop presses in the first `REEL_MIN_SPIN_MS` of a spin are ignored, which closes an exploit that repeated triples.
 - Scoring adds up the line: `matchPoints × multiplier − bugs × BUG_PENALTY`. Pair 10, triple 50, and 💎 matches pay `RUBY_FACTOR`× as much. Bugs are flat (never multiplied), so 🚂🚂🐛 with no streak is 0 and 🐛🐛🐛 is −30. A match grows the streak, and any bug or a miss breaks it. Keep it a plain sum. Players reason by adding what they see, so no special cases (an earlier version where a pair with a bug paid full points, and 🐛🐛🐛 was −100, read as unfair). The status line (`SpinBreakdown` in `SlotMachine`) shows the sum. A round's score never drops below 0 (the server rejects negatives).
 - Balance was checked with a Monte Carlo simulation of a spammer, a beginner, a casual and a skilled player. The target order is spammer < beginner < casual < skilled, with about 6% or fewer beginners scoring 0. Re-check that order before changing payouts, penalties, speeds or the timer.
+- **No skip on the result screen.** Collecting emails is the booth's goal, so the only way to the next player is submitting the form (then "Next player"). Don't add a skip back without marketing's say-so.
+- **Staff reset is hidden.** Holding the machine title for `STAFF_RESET_HOLD_MS` resets from any phase (mid-spin or the result screen) without saving. Keep it free of any visible hint, so players don't use it as a skip.
 - Fullscreen targets the `App` root. The layout switches only on a real `fullscreenchange`, and the click is never trusted. A pointer click on any `[data-native-keys]` control must release focus (`releasePointerFocus`) so Space and Enter keep stopping reels.
 
 ## Conventions

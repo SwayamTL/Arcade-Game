@@ -1,3 +1,4 @@
+// End-of-round overlay: final score, RailsFactory pitch, then PlayerForm or the saved rank with "Next player".
 import { useState } from 'react'
 import { RESULT } from '../content/copy'
 import { PlayerForm } from './PlayerForm'
@@ -50,7 +51,6 @@ export function ResultPanel({ score, spins, jackpots, attemptId, onSubmitted, on
             setSaved({ rank })
             onSubmitted()
           }}
-          onSkip={onNextPlayer}
         />
       )}
     </div>

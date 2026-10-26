@@ -15,6 +15,9 @@ This README explains how the pieces fit together. Commands, environment variable
 
 `useSlotGame` keeps the game state in a ref and runs a `requestAnimationFrame` loop that writes reel transforms straight to the DOM. React only gets `GameView` snapshots, so it doesn't re-render every frame.
 
+### Staff reset
+There is no skip on the result screen, so every finished round asks for an email. If a player walks away mid-round or without submitting, staff **press and hold the "Ruby Slots" title on the machine for 3 seconds** (`STAFF_RESET_HOLD_MS`). `StaffReset` then calls `useSlotGame.reset()`, which lands any spinning reels and returns to a fresh round. Nothing is saved. The control has no visible hint, so players won't find it by accident.
+
 ### Saving a score
 `PlayerForm` → `validateSubmission` (instant browser check) → `api/client.submitScore` → `POST /api/submit-score` → `netlify/lib/handlers.handleSubmit` (validates again) → `netlify/lib/store` → the Supabase table `game_submissions`. The reply includes today's rank, and `App` refreshes `Leaderboard`.
 
@@ -39,20 +42,21 @@ Each entry says what the file does, what it affects, and when you'd change it.
 ### `src/game/` (Ruby Slots rules and engine, no UI)
 | File | What it does | Change it to… |
 |---|---|---|
-| `rules.ts` | **Every tunable number**: reel strips, symbols, round length, payouts (pair, triple, ruby factor), bug penalty, multiplier cap, speed levels, minimum spin time, lever pull threshold, and `MAX_PLAUSIBLE_SCORE` (used by the server). | Rebalance the game. Start here. |
+| `rules.ts` | **Every tunable number**: reel strips, symbols, round length, payouts (pair, triple, ruby factor), bug penalty, multiplier cap, speed levels, minimum spin time, lever pull threshold, the staff reset hold time, and `MAX_PLAUSIBLE_SCORE` (used by the server). | Rebalance the game. Start here. |
 | `scoring.ts` | Pure functions: name the payline (for the status text), add up its points and streak, pick reel speed for a score. | Change *how* spins are scored (not just the numbers). |
 | `reels.ts` | Reel position helpers: wrapping, snapping to the nearest symbol, the cells to render. | Change how reels land or render. |
-| `useSlotGame.ts` | The game state machine (`ready → spinning → scored → … → over`), the timer, the animation loop, `pull`/`stop`/`reset`. | Change round flow, timing or what counts as valid input. |
+| `useSlotGame.ts` | The game state machine (`ready → spinning → scored → … → over`), the timer, the animation loop, `pull`/`stop`/`reset` (reset works from any phase). | Change round flow, timing or what counts as valid input. |
 
 ### `src/components/` (UI)
 | File | What it does | Change it to… |
 |---|---|---|
-| `SlotMachine.tsx` | The machine: score/timer header, reels, lever, status line, Stop button. Holds the keyboard shortcuts and wrong-control hints. Sizes the reels for fullscreen. | Change the machine's look or controls. |
+| `SlotMachine.tsx` | The machine: score/timer header, reels, lever, status line, Stop button. Holds the keyboard shortcuts and wrong-control hints. Its title is wrapped in `StaffReset`. Sizes the reels for fullscreen. | Change the machine's look or controls. |
 | `Reel.tsx` | One reel window. Its strip is moved by the game loop, not by React. | Change reel visuals. |
 | `Lever.tsx` | The draggable lever. Travel is measured from the rendered track. States: `ready` (can be pulled), `busy` (pressing it is a wrong move), `off`. | Change the lever's feel or pull threshold behaviour. |
 | `feedback.ts` | `nudge` (shake, or an outline pulse with reduced motion) and `buzz` (vibration, Android only). | Change wrong-input or haptic feedback. |
+| `StaffReset.tsx` | Hidden staff control: holding its child (the machine title) for `STAFF_RESET_HOLD_MS` resets the round. | Change the staff reset gesture. |
 | `ResultPanel.tsx` | End-of-round overlay: final score, RailsFactory pitch, then the form or "Saved, you're #N". | Change the end-of-round screen. |
-| `PlayerForm.tsx` | Name, email, consent and opt-in. Validates in the browser, submits, handles retry and skip. | Change form fields or behaviour. |
+| `PlayerForm.tsx` | Name, email, consent and opt-in. Validates in the browser, submits and handles retry. There is no skip: submitting is the only way to the next player, because collecting emails is the booth's goal. | Change form fields or behaviour. |
 | `Leaderboard.tsx` | Today's top 10, refreshed after each saved score. | Change how the board looks. |
 | `Header.tsx` | Site header with the RailsFactory and RubyConf logos. | Change header content. |
 | `FullscreenButton.tsx` | The fullscreen icon button with its fallback note, plus the shared `FullscreenIcon`. | Change the fullscreen control's look. |
