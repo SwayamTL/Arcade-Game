@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { REEL_SPEED_FACTORS, REEL_STRIPS, RESULT_PAUSE_MS, ROUND_MS, SETTLE_MS } from './rules'
+import { REEL_MIN_SPIN_MS, REEL_SPEED_FACTORS, REEL_STRIPS, RESULT_PAUSE_MS, ROUND_MS, SETTLE_MS } from './rules'
 import { evaluateSpin, speedForScore, type SpinResult } from './scoring'
 import { snapTarget, symbolAt, wrap } from './reels'
 
@@ -26,6 +26,7 @@ interface GameState {
   lastSpin: SpinResult | null
   deadline: number
   unlockAt: number
+  spinStartedAt: number
   attemptId: string | null
 }
 
@@ -54,6 +55,7 @@ function newGame(): GameState {
     lastSpin: null,
     deadline: 0,
     unlockAt: 0,
+    spinStartedAt: 0,
     attemptId: null,
   }
 }
@@ -109,7 +111,8 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     if (g.stoppedCount === REEL_STRIPS.length) {
       const landed = reels.current.map((r, i) => symbolAt(REEL_STRIPS[i], r.settleTo))
       const result = evaluateSpin([landed[0], landed[1], landed[2]], g.streak)
-      g.score += result.points
+      // Bug penalties can't take a round below zero.
+      g.score = Math.max(0, g.score + result.points)
       g.streak = result.streak
       g.lastSpin = result
       g.spins += 1
@@ -136,31 +139,32 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     [publish, stopNextReel],
   )
 
-  const pull = useCallback(() => {
+  // The lever starts every spin; Stop only stops reels. Each returns whether the input counted,
+  // so the UI can point the player at the right control.
+  const pull = useCallback((): boolean => {
     const g = game.current
     const now = performance.now()
     if (g.phase === 'ready') {
       g.deadline = now + ROUND_MS
     } else if (g.phase !== 'scored' || now < g.unlockAt) {
-      return
+      return false
     }
     g.phase = 'spinning'
     g.stoppedCount = 0
+    g.spinStartedAt = now
     reels.current = reels.current.map((reel) => ({ ...reel, stopped: false }))
     publish()
+    return true
   }, [publish])
 
-  const stop = useCallback(() => {
-    if (game.current.phase !== 'spinning') return
-    stopNextReel(performance.now())
+  const stop = useCallback((): boolean => {
+    const g = game.current
+    const now = performance.now()
+    if (g.phase !== 'spinning' || now - g.spinStartedAt < REEL_MIN_SPIN_MS) return false
+    stopNextReel(now)
     publish()
+    return true
   }, [publish, stopNextReel])
-
-  // One input drives the whole machine: pull when idle, otherwise stop the next reel.
-  const act = useCallback(() => {
-    if (game.current.phase === 'spinning') stop()
-    else pull()
-  }, [pull, stop])
 
   const reset = useCallback(() => {
     game.current = newGame()
@@ -218,5 +222,5 @@ export function useSlotGame(initialOffsets: readonly number[]) {
     stripEls.current[index] = el
   }, [])
 
-  return { view, act, reset, setStripEl }
+  return { view, pull, stop, reset, setStripEl }
 }

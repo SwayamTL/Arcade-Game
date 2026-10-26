@@ -23,6 +23,10 @@ export const ROUND_MS = 45_000
 // After a spin is scored, the next pull is locked briefly so the result can be read.
 export const RESULT_PAUSE_MS = 500
 
+// Stop presses are ignored until the reels have spun this long. Without it, an instant stop
+// lands on the previous symbols and a triple can be repeated on purpose.
+export const REEL_MIN_SPIN_MS = 350
+
 // Time for a stopped reel to ease onto the nearest symbol.
 export const SETTLE_MS = 120
 
@@ -30,8 +34,13 @@ export const PAYOUTS = {
   rubyTriple: 100,
   triple: 50,
   pair: 10,
-  bugTriple: 0,
+  // A production outage: three bugs on the payline.
+  bugTriple: -100,
 } as const
+
+// Points lost for each bug on the payline when the spin doesn't score. This keeps blind mashing
+// below a beginner who aims; a round's score never drops below 0.
+export const BUG_PENALTY = 10
 
 // Multiplier for the Nth consecutive scoring spin: x1, x2, x3, then capped at x4.
 export const MAX_MULTIPLIER = 4
@@ -51,3 +60,6 @@ export const REEL_SPEED_FACTORS = [1, 1.07, 1.14] as const
 // RESULT_PAUSE_MS, so this assumes a ruby jackpot at max multiplier on every possible spin.
 export const MAX_PLAUSIBLE_SCORE =
   Math.ceil(ROUND_MS / RESULT_PAUSE_MS) * PAYOUTS.rubyTriple * MAX_MULTIPLIER
+
+// A lever drag spins once the knob passes this fraction of its track. A tap always spins.
+export const LEVER_PULL_FRACTION = 0.5

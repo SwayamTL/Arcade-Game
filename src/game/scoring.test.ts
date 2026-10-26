@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_MULTIPLIER, PAYOUTS, SPEED_LEVELS } from './rules'
+import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, SPEED_LEVELS } from './rules'
 import { classify, evaluateSpin, multiplierFor, speedForScore } from './scoring'
 
 describe('classify', () => {
@@ -43,8 +43,18 @@ describe('evaluateSpin', () => {
     expect(evaluateSpin(['ruby', 'rails', 'gear'], 3)).toMatchObject({ points: 0, streak: 0, multiplier: 1 })
   })
 
-  it('resets the streak on a bug triple', () => {
+  it('costs points and the streak on a bug triple', () => {
+    expect(PAYOUTS.bugTriple).toBeLessThan(0)
     expect(evaluateSpin(['bug', 'bug', 'bug'], 3)).toMatchObject({ outcome: 'bug', points: PAYOUTS.bugTriple, streak: 0 })
+  })
+
+  it('charges for each bug on a losing spin', () => {
+    expect(evaluateSpin(['bug', 'rails', 'gear'], 2)).toMatchObject({ outcome: 'bugged', points: -BUG_PENALTY, streak: 0 })
+    expect(evaluateSpin(['bug', 'bug', 'ruby'], 0)).toMatchObject({ outcome: 'bugged', points: -2 * BUG_PENALTY })
+  })
+
+  it('still pays a pair that has a bug beside it', () => {
+    expect(evaluateSpin(['rails', 'rails', 'bug'], 1)).toMatchObject({ outcome: 'pair', points: PAYOUTS.pair * 2, streak: 2 })
   })
 })
 

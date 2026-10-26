@@ -18,16 +18,25 @@ export const SITE = {
 export const GAME = {
   name: 'Ruby Slots',
   short: 'Stop on three rubies',
-  howTo: 'Pull, then stop each reel left to right. Line up 💎💎💎 for the big score. Keep a streak going to multiply your points. You have 45 seconds.',
-  keyHint: 'Space or Enter works too',
+  howTo:
+    'Pull the lever, then hit Stop on each reel. Line up 💎💎💎 and keep a streak going to multiply your points. Each 🐛 on a losing spin costs 10.',
+  keyHint: 'Keyboard: ↓ pulls the lever, Space or Enter stops a reel.',
+  stop: 'Stop',
 }
 
 export const OUTCOME_COPY: Record<Outcome, string> = {
   jackpot: 'Three rubies!',
   triple: 'Triple!',
   pair: 'Pair',
-  bug: 'Production bug. Streak lost.',
+  bug: 'Production outage!',
+  bugged: 'Bug shipped. Streak lost.',
   miss: 'No match. Streak lost.',
+}
+
+// Shown when the player uses the wrong control.
+export const NUDGE = {
+  pull: 'Pull the lever to spin',
+  stop: 'Hit Stop to stop the reels',
 }
 
 export const RESULT = {
@@ -57,4 +66,12 @@ export const FORM = {
   submitting: 'Saving…',
   retry: 'Try again',
   skip: 'Skip, next player',
+}
+
+export const FULLSCREEN = {
+  enter: 'Enter Full Screen',
+  exit: 'Exit Full Screen',
+  tileHint: 'Tap to play full screen',
+  unsupported: 'Full screen isn’t available in this browser. Use the tablet’s kiosk mode instead.',
+  blocked: 'The browser blocked full screen. Try again, or use the tablet’s kiosk mode.',
 }

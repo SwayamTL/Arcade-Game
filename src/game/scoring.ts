@@ -1,6 +1,7 @@
-import { MAX_MULTIPLIER, PAYOUTS, SPEED_LEVELS, type SymbolId } from './rules'
+import { BUG_PENALTY, MAX_MULTIPLIER, PAYOUTS, SPEED_LEVELS, type SymbolId } from './rules'
 
-export type Outcome = 'jackpot' | 'triple' | 'pair' | 'bug' | 'miss'
+// 'bugged' is a losing spin with one or two bugs on the payline; 'bug' is three of them.
+export type Outcome = 'jackpot' | 'triple' | 'pair' | 'bug' | 'bugged' | 'miss'
 
 export interface SpinResult {
   outcome: Outcome
@@ -27,6 +28,7 @@ const BASE_POINTS: Record<Outcome, number> = {
   triple: PAYOUTS.triple,
   pair: PAYOUTS.pair,
   bug: PAYOUTS.bugTriple,
+  bugged: 0,
   miss: 0,
 }
 
@@ -38,10 +40,12 @@ export function evaluateSpin(
   symbols: readonly [SymbolId, SymbolId, SymbolId],
   streak: number,
 ): SpinResult {
-  const outcome = classify(symbols)
-  const basePoints = BASE_POINTS[outcome]
-  if (basePoints === 0) {
-    return { outcome, basePoints, multiplier: 1, points: 0, streak: 0 }
+  const classified = classify(symbols)
+  const bugs = symbols.filter((s) => s === 'bug').length
+  const outcome: Outcome = classified === 'miss' && bugs > 0 ? 'bugged' : classified
+  const basePoints = outcome === 'bugged' ? -BUG_PENALTY * bugs : BASE_POINTS[outcome]
+  if (basePoints <= 0) {
+    return { outcome, basePoints, multiplier: 1, points: basePoints, streak: 0 }
   }
   const multiplier = multiplierFor(streak)
   return { outcome, basePoints, multiplier, points: basePoints * multiplier, streak: streak + 1 }
