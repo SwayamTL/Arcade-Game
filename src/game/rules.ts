@@ -49,10 +49,10 @@ export const MAX_MULTIPLIER = 3
 
 // Reel speed in symbols per second, stepping up once the score passes each threshold.
 export const SPEED_LEVELS: readonly { minScore: number; symbolsPerSecond: number }[] = [
-  { minScore: 0, symbolsPerSecond: 8 },
-  { minScore: 150, symbolsPerSecond: 10.5 },
-  { minScore: 400, symbolsPerSecond: 13 },
-  { minScore: 800, symbolsPerSecond: 15.5 },
+  { minScore: 0, symbolsPerSecond: 13 },
+  { minScore: 20, symbolsPerSecond: 15 },
+  { minScore: 40, symbolsPerSecond: 17 },
+  { minScore: 100, symbolsPerSecond: 20 },
 ]
 
 // Slight per-reel variation so the reels never move in lockstep.
